@@ -16,12 +16,17 @@ def fetch_history(yf_ticker: str) -> pd.DataFrame:
     return yf.Ticker(yf_ticker).history(start=start)
 
 
-def normalize_ticker(ticker_symbol: str) -> str:
-    """Append .NS for Indian (NSE) stocks if no exchange suffix is provided."""
-    return ticker_symbol if "." in ticker_symbol else ticker_symbol + ".NS"
+EXCHANGE_SUFFIXES = {"NSE": ".NS", "BSE": ".BO", "US": ""}
 
 
-def analyze_stock(ticker_symbol: str):
+def normalize_ticker(ticker_symbol: str, exchange: str = "NSE") -> str:
+    """Append the exchange suffix (NSE/BSE) if no suffix is already provided. US tickers are left as-is."""
+    if "." in ticker_symbol:
+        return ticker_symbol
+    return ticker_symbol + EXCHANGE_SUFFIXES.get(exchange, ".NS")
+
+
+def analyze_stock(ticker_symbol: str, exchange: str = "NSE"):
     """
     1. Finds the 52-week High Date using Daily Highs.
     2. Slices Close prices from that High Date to Today (no second fetch).
@@ -31,7 +36,7 @@ def analyze_stock(ticker_symbol: str):
 
     Returns (summary_dict | None, calc_df | None, error_msg | None).
     """
-    yf_ticker = normalize_ticker(ticker_symbol)
+    yf_ticker = normalize_ticker(ticker_symbol, exchange)
 
     try:
         hist_1y = fetch_history(yf_ticker)
@@ -101,6 +106,7 @@ This application replicates your Google Sheets logic fully automated:
 
 with st.sidebar:
     st.header("Stock Configuration")
+    exchange = st.selectbox("Exchange", options=list(EXCHANGE_SUFFIXES.keys()), index=0)
     raw_stock_list = st.text_area(
         "Enter Stock Symbols (one per line):",
         value="INDUSINDBK\nRELAXO\nBATAINDIA\nDRREDDY\nHAL\nINFY\nTRENT",
@@ -135,7 +141,7 @@ if run_button:
 
         for i, stock in enumerate(stock_list):
             status_text.text(f"🔍 Analyzing {stock}...")
-            summary, calc_df, err = analyze_stock(stock)
+            summary, calc_df, err = analyze_stock(stock, exchange)
 
             if summary:
                 summary_data.append(summary)
