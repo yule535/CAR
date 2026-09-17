@@ -2,3 +2,5 @@
 .gstack/
 .postquode/
 screenshots/
+.claude/
+__pycache__/
